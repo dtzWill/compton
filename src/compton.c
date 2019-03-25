@@ -672,8 +672,12 @@ static void restack_win(session_t *ps, win *w, xcb_window_t new_above) {
 
 		bool found = false;
 		for (prev = &ps->list; *prev; prev = &(*prev)->next) {
-			if ((*prev)->id == new_above && (*prev)->state != WSTATE_DESTROYING) {
+			if ((*prev)->id == new_above) {
 				found = true;
+				if ((*prev)->state == WSTATE_DESTROYING) {
+					log_error("(%#010x, %#010x): new above window is WSTATE_DESTROYING", w->id, new_above);
+					new_above = XCB_NONE;
+				}
 				break;
 			}
 		}
