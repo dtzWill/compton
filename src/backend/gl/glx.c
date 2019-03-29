@@ -70,7 +70,7 @@ struct glx_fbconfig_info *glx_find_fbconfig(Display *dpy, int screen, struct xvi
 	                          GLX_DRAWABLE_TYPE, GLX_PIXMAP_BIT,
 	                          GLX_X_VISUAL_TYPE, GLX_TRUE_COLOR,
 	                          GLX_X_RENDERABLE, true,
-	                          GLX_FRAMEBUFFER_SRGB_CAPABLE_EXT, GLX_DONT_CARE,
+	                          GLX_FRAMEBUFFER_SRGB_CAPABLE_EXT, (int)GLX_DONT_CARE,
 	                          GLX_BUFFER_SIZE, m.red_size + m.green_size +
 	                                           m.blue_size + m.alpha_size,
 	                          GLX_RED_SIZE, m.red_size,
