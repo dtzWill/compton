@@ -956,6 +956,7 @@ void add_win(session_t *ps, xcb_window_t id, xcb_window_t prev) {
 		// already reparented elsewhere.
 		// BTW, we don't care about Input Only windows, except for stacking
 		// proposes, so we need to keep track of them still.
+		log_debug("Window %#010x: unviewable or unable to get attributes, ignoring.", id);
 		free(a);
 		return;
 	}
