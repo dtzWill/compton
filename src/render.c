@@ -168,17 +168,17 @@ void free_paint(session_t *ps, paint_t *ppaint) {
 	ppaint->pixmap = XCB_NONE;
 }
 
-void render(session_t *ps, int x, int y, int dx, int dy, int wid, int hei, double opacity,
-            bool argb, bool neg, xcb_render_picture_t pict, glx_texture_t *ptex,
-            const region_t *reg_paint, const glx_prog_main_t *pprogram) {
+void render(session_t *ps, int16_t x, int16_t y, int16_t dx, int16_t dy, uint16_t wid,
+            uint16_t hei, double opacity, bool argb, bool neg, xcb_render_picture_t pict,
+            glx_texture_t *ptex, const region_t *reg_paint, const glx_prog_main_t *pprogram) {
 	switch (ps->o.backend) {
 	case BKEND_XRENDER:
 	case BKEND_XR_GLX_HYBRID: {
-		int alpha_step = opacity * MAX_ALPHA;
+		auto alpha_step = (uint)(opacity * MAX_ALPHA);
 		xcb_render_picture_t alpha_pict = ps->alpha_picts[alpha_step];
 		if (alpha_step != 0) {
-			int op = ((!argb && !alpha_pict) ? XCB_RENDER_PICT_OP_SRC
-			                                 : XCB_RENDER_PICT_OP_OVER);
+			uint8_t op = ((!argb && !alpha_pict) ? XCB_RENDER_PICT_OP_SRC
+			                                     : XCB_RENDER_PICT_OP_OVER);
 			xcb_render_composite(ps->c, op, pict, alpha_pict, ps->tgt_buffer.pict,
 			                     x, y, 0, 0, dx, dy, wid, hei);
 		}
@@ -196,10 +196,10 @@ void render(session_t *ps, int x, int y, int dx, int dy, int wid, int hei, doubl
 }
 
 static inline void
-paint_region(session_t *ps, win *w, int x, int y, int wid, int hei, double opacity,
-             const region_t *reg_paint, xcb_render_picture_t pict) {
-	const int dx = (w ? w->g.x : 0) + x;
-	const int dy = (w ? w->g.y : 0) + y;
+paint_region(session_t *ps, win *w, int16_t x, int16_t y, uint16_t wid, uint16_t hei,
+             double opacity, const region_t *reg_paint, xcb_render_picture_t pict) {
+	const int16_t dx = (w ? w->g.x : 0) + x;
+	const int16_t dy = (w ? w->g.y : 0) + y;
 	const bool argb = (w && (win_has_alpha(w) || ps->o.force_win_blend));
 	const bool neg = (w && w->invert_color);
 
@@ -279,8 +279,8 @@ void paint_one(session_t *ps, win *w, const region_t *reg_paint) {
 
 	const int x = w->g.x;
 	const int y = w->g.y;
-	const int wid = w->widthb;
-	const int hei = w->heightb;
+	const uint16_t wid = (uint16_t)w->widthb;
+	const uint16_t hei = (uint16_t)w->heightb;
 
 	xcb_render_picture_t pict = w->paint.pict;
 
@@ -320,10 +320,10 @@ void paint_one(session_t *ps, win *w, const region_t *reg_paint) {
 	} else {
 		// Painting parameters
 		const margin_t extents = win_calc_frame_extents(w);
-		const int t = extents.top;
-		const int l = extents.left;
-		const int b = extents.bottom;
-		const int r = extents.right;
+		const auto t = (int)extents.top;
+		const auto l = (int)extents.left;
+		const auto b = (int)extents.bottom;
+		const auto r = (int)extents.right;
 
 #define COMP_BDR(cx, cy, cwid, chei)                                                     \
 	paint_region(ps, w, (cx), (cy), (cwid), (chei), w->frame_opacity * w->opacity,   \
@@ -337,7 +337,7 @@ void paint_one(session_t *ps, win *w, const region_t *reg_paint) {
 			int body_height = hei;
 			// ctop = checked top
 			// Make sure top margin is smaller than height
-			int ctop = min_i(body_height, t);
+			int ctop = min2(body_height, t);
 			if (ctop > 0)
 				COMP_BDR(0, 0, wid, ctop);
 
@@ -348,7 +348,7 @@ void paint_one(session_t *ps, win *w, const region_t *reg_paint) {
 			// bottom
 			// cbot = checked bottom
 			// Make sure bottom margin is not too large
-			int cbot = min_i(body_height, b);
+			int cbot = min2(body_height, b);
 			if (cbot > 0)
 				COMP_BDR(0, hei - cbot, wid, cbot);
 
@@ -359,7 +359,7 @@ void paint_one(session_t *ps, win *w, const region_t *reg_paint) {
 
 			// left
 			int body_width = wid;
-			int cleft = min_i(body_width, l);
+			int cleft = min2(body_width, l);
 			if (cleft > 0)
 				COMP_BDR(0, ctop, cleft, body_height);
 
@@ -368,7 +368,7 @@ void paint_one(session_t *ps, win *w, const region_t *reg_paint) {
 				break;
 
 			// right
-			int cright = min_i(body_width, r);
+			int cright = min2(body_width, r);
 			if (cright > 0)
 				COMP_BDR(wid - cright, ctop, cright, body_height);
 
@@ -377,8 +377,8 @@ void paint_one(session_t *ps, win *w, const region_t *reg_paint) {
 				break;
 
 			// body
-			paint_region(ps, w, cleft, ctop, body_width, body_height,
-			             w->opacity, reg_paint, pict);
+			paint_region(ps, w, (int16_t)cleft, (int16_t)ctop, (uint16_t)body_width,
+			             (uint16_t)body_height, w->opacity, reg_paint, pict);
 		} while (0);
 	}
 
@@ -396,7 +396,7 @@ void paint_one(session_t *ps, win *w, const region_t *reg_paint) {
 		switch (ps->o.backend) {
 		case BKEND_XRENDER:
 		case BKEND_XR_GLX_HYBRID: {
-			unsigned short cval = 0xffff * dim_opacity;
+			auto cval = (uint16_t)(0xffff * dim_opacity);
 
 			// Premultiply color
 			xcb_render_color_t color = {
@@ -407,8 +407,8 @@ void paint_one(session_t *ps, win *w, const region_t *reg_paint) {
 			};
 
 			xcb_rectangle_t rect = {
-			    .x = x,
-			    .y = y,
+			    .x = (int16_t)x,
+			    .y = (int16_t)y,
 			    .width = wid,
 			    .height = hei,
 			};
@@ -418,8 +418,8 @@ void paint_one(session_t *ps, win *w, const region_t *reg_paint) {
 		} break;
 #ifdef CONFIG_OPENGL
 		case BKEND_GLX:
-			glx_dim_dst(ps, x, y, wid, hei, ps->psglx->z - 0.7, dim_opacity,
-			            reg_paint);
+			glx_dim_dst(ps, x, y, wid, hei, (float)ps->psglx->z - 0.7f,
+			            (float)dim_opacity, reg_paint);
 			break;
 #endif
 		default: assert(false);
@@ -585,9 +585,9 @@ static inline void win_paint_shadow(session_t *ps, win *w, region_t *reg_paint) 
 		return;
 	}
 
-	render(ps, 0, 0, w->g.x + w->shadow_dx, w->g.y + w->shadow_dy, w->shadow_width,
-	       w->shadow_height, w->shadow_opacity, true, false, w->shadow_paint.pict,
-	       w->shadow_paint.ptex, reg_paint, NULL);
+	render(ps, 0, 0, w->g.x + (int16_t)w->shadow_dx, w->g.y + (int16_t)w->shadow_dy,
+	       (uint16_t)w->shadow_width, (uint16_t)w->shadow_height, w->shadow_opacity,
+	       true, false, w->shadow_paint.pict, w->shadow_paint.ptex, reg_paint, NULL);
 }
 
 /**
@@ -605,8 +605,9 @@ static inline void win_paint_shadow(session_t *ps, win *w, region_t *reg_paint) 
  *
  * @return true if successful, false otherwise
  */
-static bool xr_blur_dst(session_t *ps, xcb_render_picture_t tgt_buffer, int x, int y, int wid,
-                        int hei, xcb_render_fixed_t **blur_kerns, const region_t *reg_clip) {
+static bool xr_blur_dst(session_t *ps, xcb_render_picture_t tgt_buffer, int16_t x,
+                        int16_t y, uint16_t wid, uint16_t hei,
+                        xcb_render_fixed_t **blur_kerns, const region_t *reg_clip) {
 	assert(blur_kerns[0]);
 
 	// Directly copying from tgt_buffer to it does not work, so we create a
@@ -627,16 +628,16 @@ static bool xr_blur_dst(session_t *ps, xcb_render_picture_t tgt_buffer, int x, i
 		assert(i < MAX_BLUR_PASS - 1);
 		xcb_render_fixed_t *convolution_blur = blur_kerns[i];
 		// `x / 65536.0` converts from X fixed point to double
-		int kwid = ((double)convolution_blur[0]) / 65536.0,
-		    khei = ((double)convolution_blur[1]) / 65536.0;
+		int kwid = (int)((double)convolution_blur[0] / 65536.0),
+		    khei = (int)((double)convolution_blur[1] / 65536.0);
 		bool rd_from_tgt = (tgt_buffer == src_pict);
 
 		// Copy from source picture to destination. The filter must
 		// be applied on source picture, to get the nearby pixels outside the
 		// window.
-		xcb_render_set_picture_filter(ps->c, src_pict, strlen(XRFILTER_CONVOLUTION),
-		                              XRFILTER_CONVOLUTION, kwid * khei + 2,
-		                              convolution_blur);
+		xcb_render_set_picture_filter(
+		    ps->c, src_pict, strlen(XRFILTER_CONVOLUTION), XRFILTER_CONVOLUTION,
+		    (uint32_t)(kwid * khei + 2), convolution_blur);
 		xcb_render_composite(ps->c, XCB_RENDER_PICT_OP_SRC, src_pict, XCB_NONE,
 		                     dst_pict, (rd_from_tgt ? x : 0),
 		                     (rd_from_tgt ? y : 0), 0, 0, (rd_from_tgt ? 0 : x),
@@ -664,10 +665,10 @@ static bool xr_blur_dst(session_t *ps, xcb_render_picture_t tgt_buffer, int x, i
  */
 static inline void win_blur_background(session_t *ps, win *w, xcb_render_picture_t tgt_buffer,
                                        const region_t *reg_paint) {
-	const int x = w->g.x;
-	const int y = w->g.y;
-	const int wid = w->widthb;
-	const int hei = w->heightb;
+	const int16_t x = w->g.x;
+	const int16_t y = w->g.y;
+	const auto wid = (uint16_t)w->widthb;
+	const auto hei = (uint16_t)w->heightb;
 
 	double factor_center = 1.0;
 	// Adjust blur strength according to window opacity, to make it appear
@@ -702,7 +703,7 @@ static inline void win_blur_background(session_t *ps, win *w, xcb_render_picture
 
 			// If kern_dst is allocated, it's always allocated to the right
 			// size
-			size_t size = kern_dst ? kern_src->w * kern_src->h + 2 : 0;
+			size_t size = kern_dst ? (size_t)(kern_src->w * kern_src->h + 2) : 0;
 			x_picture_filter_from_conv(kern_src, factor_center, &kern_dst, &size);
 			ps->blur_kerns_cache[i] = kern_dst;
 		}
@@ -726,8 +727,8 @@ static inline void win_blur_background(session_t *ps, win *w, xcb_render_picture
 #ifdef CONFIG_OPENGL
 	case BKEND_GLX:
 		// TODO: Handle frame opacity
-		glx_blur_dst(ps, x, y, wid, hei, ps->psglx->z - 0.5, factor_center,
-		             reg_paint, &w->glx_blur_cache);
+		glx_blur_dst(ps, x, y, wid, hei, (float)ps->psglx->z - 0.5f,
+		             (float)factor_center, reg_paint, &w->glx_blur_cache);
 		break;
 #endif
 	default: assert(0);
@@ -800,7 +801,7 @@ void paint_all(session_t *ps, win *const t, bool ignore_damage) {
 #endif
 
 	if (ps->o.resize_damage > 0) {
-		resize_region(&region, ps->o.resize_damage);
+		resize_region(&region, (short)ps->o.resize_damage);
 	}
 
 	// Remove the damaged area out of screen
@@ -1151,7 +1152,7 @@ bool init_render(session_t *ps) {
 
 	// Generates another Picture for shadows if the color is modified by
 	// user
-	if (!ps->o.shadow_red && !ps->o.shadow_green && !ps->o.shadow_blue) {
+	if (ps->o.shadow_red == 0 && ps->o.shadow_green == 0 && ps->o.shadow_blue == 0) {
 		ps->cshadow_picture = ps->black_picture;
 	} else {
 		ps->cshadow_picture = solid_picture(ps->c, ps->root, true, 1, ps->o.shadow_red,

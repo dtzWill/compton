@@ -1069,7 +1069,7 @@ static bool cdbus_process_opts_set(session_t *ps, DBusMessage *msg) {
 		int32_t val = 0.0;
 		if (!cdbus_msg_get_arg(msg, 1, DBUS_TYPE_INT32, &val))
 			return false;
-		ps->o.fade_delta = max_i(val, 1);
+		ps->o.fade_delta = max2(val, 1);
 		goto cdbus_process_opts_set_success;
 	}
 

@@ -704,13 +704,13 @@ bool glx_blur_dst(session_t *ps, int dx, int dy, int width, int height, float z,
 	    inc_x += XFIXED_TO_DOUBLE(kern[0]) / 2;
 	    inc_y += XFIXED_TO_DOUBLE(kern[1]) / 2;
 	  }
-	  inc_x = min_i(ps->o.resize_damage, inc_x);
-	  inc_y = min_i(ps->o.resize_damage, inc_y);
+	  inc_x = min2(ps->o.resize_damage, inc_x);
+	  inc_y = min2(ps->o.resize_damage, inc_y);
 
-	  mdx = max_i(dx - inc_x, 0);
-	  mdy = max_i(dy - inc_y, 0);
-	  int mdx2 = min_i(dx + width + inc_x, ps->root_width),
-	      mdy2 = min_i(dy + height + inc_y, ps->root_height);
+	  mdx = max2(dx - inc_x, 0);
+	  mdy = max2(dy - inc_y, 0);
+	  int mdx2 = min2(dx + width + inc_x, ps->root_width),
+	      mdy2 = min2(dy + height + inc_y, ps->root_height);
 	  mwidth = mdx2 - mdx;
 	  mheight = mdy2 - mdy;
 	}

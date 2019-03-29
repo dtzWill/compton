@@ -27,7 +27,7 @@ __attribute__((optimize("-fno-fast-math")))
 #endif
 static inline bool
 safe_isnan(double a) {
-	return isnan(a);
+	return __builtin_isnan(a);
 }
 
 #define CASESTRRET(s)                                                                    \
@@ -66,32 +66,23 @@ static inline int attr_const normalize_i_range(int i, int min, int max) {
 }
 
 /**
- * Select the larger integer of two.
+ * Normalize an ulong value to a specific range.
+ *
+ * @param i int value to normalize
+ * @param min minimal value
+ * @param max maximum value
+ * @return normalized value
  */
-static inline int attr_const max_i(int a, int b) {
-	return (a > b ? a : b);
+static inline ulong attr_const normalize_ul_range(ulong i, ulong min, ulong max) {
+	if (i > max)
+		return max;
+	if (i < min)
+		return min;
+	return i;
 }
 
-/**
- * Select the smaller integer of two.
- */
-static inline int attr_const min_i(int a, int b) {
-	return (a > b ? b : a);
-}
-
-/**
- * Select the larger long integer of two.
- */
-static inline long attr_const max_l(long a, long b) {
-	return (a > b ? a : b);
-}
-
-/**
- * Select the smaller long integer of two.
- */
-static inline long attr_const min_l(long a, long b) {
-	return (a > b ? b : a);
-}
+#define min2(a, b) ((a) > (b) ? (b) : (a))
+#define max2(a, b) ((a) > (b) ? (a) : (b))
 
 static inline int attr_const popcountl(unsigned long a) {
 	return __builtin_popcountl(a);
@@ -147,7 +138,7 @@ allocchk_(const char *func_name, const char *file, unsigned int line, void *ptr)
 #define cvalloc(size) allocchk(malloc(size))
 
 /// @brief Wrapper of calloc().
-#define ccalloc(nmemb, type) ((type *)allocchk(calloc((nmemb), sizeof(type))))
+#define ccalloc(nmemb, type) ((type *)allocchk(calloc((size_t)(nmemb), sizeof(type))))
 
 /// @brief Wrapper of ealloc().
 #define crealloc(ptr, nmemb)                                                             \

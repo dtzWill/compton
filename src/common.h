@@ -94,7 +94,7 @@
 #define BUF_LEN 80
 
 #define ROUNDED_PERCENT 0.05
-#define ROUNDED_PIXELS 10
+#define ROUNDED_PIXELS ((uint16_t)10)
 
 #define REGISTER_PROP "_NET_WM_CM_S"
 
@@ -306,13 +306,13 @@ typedef struct session {
 	/// Default visual.
 	xcb_visualid_t vis;
 	/// Default depth.
-	int depth;
+	uint8_t depth;
 	/// Root window.
 	xcb_window_t root;
 	/// Height of root window.
-	int root_height;
+	uint16_t root_height;
 	/// Width of root window.
-	int root_width;
+	uint16_t root_width;
 	// Damage of root window.
 	// Damage root_damage;
 	/// X Composite overlay window. Used if <code>--paint-on-overlay</code>.
@@ -416,7 +416,7 @@ typedef struct session {
 
 	// === Software-optimization-related ===
 	/// Currently used refresh rate.
-	short refresh_rate;
+	uint16_t refresh_rate;
 	/// Interval between refresh in nanoseconds.
 	long refresh_intv;
 	/// Nanosecond offset of the first painting.
@@ -711,8 +711,10 @@ _Noreturn static inline void die(const char *msg) {
  * Wrapper of XInternAtom() for convenience.
  */
 static inline xcb_atom_t get_atom(session_t *ps, const char *atom_name) {
+	auto atom_len = strlen(atom_name);
+	assert(atom_len <= UINT16_MAX);
 	xcb_intern_atom_reply_t *reply = xcb_intern_atom_reply(
-	    ps->c, xcb_intern_atom(ps->c, 0, strlen(atom_name), atom_name), NULL);
+	    ps->c, xcb_intern_atom(ps->c, 0, (uint16_t)atom_len, atom_name), NULL);
 
 	xcb_atom_t atom = XCB_NONE;
 	if (reply) {

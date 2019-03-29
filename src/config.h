@@ -121,7 +121,7 @@ typedef struct options_t {
 
 	// === VSync & software optimization ===
 	/// User-specified refresh rate.
-	int refresh_rate;
+	uint16_t refresh_rate;
 	/// Whether to enable refresh-rate-based software optimization.
 	bool sw_opti;
 	/// VSync method to use;

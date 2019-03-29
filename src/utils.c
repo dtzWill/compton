@@ -12,7 +12,7 @@ void report_allocation_failure(const char *func, const char *file, unsigned int 
 	// memory allocation. Since logging framework allocates memory (and might even
 	// have not been initialized yet), so we can't use it.
 	char buf[11];
-	int llen = uitostr(line, buf);
+	uint llen = uitostr(line, buf);
 	const char msg1[] = " has failed to allocate memory, ";
 	const char msg2[] = ". Aborting...\n";
 	const struct iovec v[] = {
