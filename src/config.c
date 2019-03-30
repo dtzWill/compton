@@ -82,11 +82,11 @@ conv *parse_blur_kern(const char *src, const char **endptr, bool *hasneg) {
 	if (src == (pc = parse_readnum(src, &val)))
 		goto err1;
 	src = pc;
-	width = val;
+	width = (int)val;
 	if (src == (pc = parse_readnum(src, &val)))
 		goto err1;
 	src = pc;
-	height = val;
+	height = (int)val;
 
 	// Validate matrix width and height
 	if (width <= 0 || height <= 0) {
@@ -281,7 +281,8 @@ bool parse_geometry(session_t *ps, const char *src, region_t *dest) {
 	if (!ps->root_width || !ps->root_height)
 		return true;
 
-	geometry_t geom = {.wid = ps->root_width, .hei = ps->root_height, .x = 0, .y = 0};
+	int x = 0, y = 0;
+	uint width = ps->root_width, height = ps->root_height;
 	long val = 0L;
 	char *endptr = NULL;
 
@@ -295,11 +296,11 @@ bool parse_geometry(session_t *ps, const char *src, region_t *dest) {
 		val = strtol(src, &endptr, 10);
 		assert(endptr);
 		if (src != endptr) {
-			geom.wid = val;
-			if (geom.wid < 0) {
+			if (val < 0) {
 				log_error("Invalid width: %s", src);
 				return false;
 			}
+			width = (uint)val;
 			src = endptr;
 		}
 		src = skip_space(src);
@@ -311,11 +312,11 @@ bool parse_geometry(session_t *ps, const char *src, region_t *dest) {
 		val = strtol(src, &endptr, 10);
 		assert(endptr);
 		if (src != endptr) {
-			geom.hei = val;
-			if (geom.hei < 0) {
+			if (val < 0) {
 				log_error("Invalid height: %s", src);
 				return false;
 			}
+			height = (uint)val;
 			src = endptr;
 		}
 		src = skip_space(src);
@@ -325,9 +326,10 @@ bool parse_geometry(session_t *ps, const char *src, region_t *dest) {
 	if ('+' == *src || '-' == *src) {
 		val = strtol(src, &endptr, 10);
 		if (endptr && src != endptr) {
-			geom.x = val;
-			if (*src == '-')
-				geom.x += ps->root_width - geom.wid;
+			x = (int)val;
+			if (*src == '-') {
+				x += ps->root_width - width;
+			}
 			src = endptr;
 		}
 		src = skip_space(src);
@@ -337,9 +339,10 @@ bool parse_geometry(session_t *ps, const char *src, region_t *dest) {
 	if ('+' == *src || '-' == *src) {
 		val = strtol(src, &endptr, 10);
 		if (endptr && src != endptr) {
-			geom.y = val;
-			if (*src == '-')
-				geom.y += ps->root_height - geom.hei;
+			y = (int)val;
+			if (*src == '-') {
+				y += ps->root_height - height;
+			}
 			src = endptr;
 		}
 		src = skip_space(src);
@@ -351,7 +354,7 @@ bool parse_geometry(session_t *ps, const char *src, region_t *dest) {
 	}
 
 parse_geometry_end:
-	pixman_region32_union_rect(dest, dest, geom.x, geom.y, geom.wid, geom.hei);
+	pixman_region32_union_rect(dest, dest, x, y, width, height);
 	return true;
 }
 

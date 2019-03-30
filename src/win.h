@@ -259,9 +259,9 @@ struct win {
 	/// Y offset of shadow. Affected by commandline argument.
 	int shadow_dy;
 	/// Width of shadow. Affected by window size and commandline argument.
-	int shadow_width;
+	uint shadow_width;
 	/// Height of shadow. Affected by window size and commandline argument.
-	int shadow_height;
+	uint shadow_height;
 	/// Picture to render shadow. Affected by window size.
 	paint_t shadow_paint;
 	/// The value of _COMPTON_SHADOW attribute of the window. Below 0 for
@@ -425,10 +425,10 @@ static inline region_t win_get_bounding_shape_global_by_val(win *w) {
  */
 static inline margin_t attr_pure win_calc_frame_extents(const win *w) {
 	margin_t result = w->frame_extents;
-	result.top = max_i(result.top, w->g.border_width);
-	result.left = max_i(result.left, w->g.border_width);
-	result.bottom = max_i(result.bottom, w->g.border_width);
-	result.right = max_i(result.right, w->g.border_width);
+	result.top = max2(result.top, w->g.border_width);
+	result.left = max2(result.left, w->g.border_width);
+	result.bottom = max2(result.bottom, w->g.border_width);
+	result.right = max2(result.right, w->g.border_width);
 	return result;
 }
 

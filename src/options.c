@@ -659,7 +659,7 @@ void get_cfg(options_t *opt, int argc, char *const *argv, bool shadow_enable,
 		P_CASELONG(293, benchmark);
 		case 294:
 			// --benchmark-wid
-			opt->benchmark_wid = strtol(optarg, NULL, 0);
+			opt->benchmark_wid = (xcb_window_t)strtol(optarg, NULL, 0);
 			break;
 		case 295:
 			log_error("--glx-use-copysubbuffermesa %s", deprecation_message);
@@ -782,8 +782,8 @@ void get_cfg(options_t *opt, int argc, char *const *argv, bool shadow_enable,
 	}
 
 	// Range checking and option assignments
-	opt->fade_delta = max_i(opt->fade_delta, 1);
-	opt->shadow_radius = max_i(opt->shadow_radius, 0);
+	opt->fade_delta = max2(opt->fade_delta, 1);
+	opt->shadow_radius = max2(opt->shadow_radius, 0);
 	opt->shadow_red = normalize_d(opt->shadow_red);
 	opt->shadow_green = normalize_d(opt->shadow_green);
 	opt->shadow_blue = normalize_d(opt->shadow_blue);

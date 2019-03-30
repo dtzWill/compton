@@ -10,7 +10,7 @@
 
 /// Sum a region convolution kernel. Region is defined by a width x height rectangle whose
 /// top left corner is at (x, y)
-double sum_kernel(const conv *map, int x, int y, int width, int height) {
+double sum_kernel(const conv *map, int x, int y, uint width, uint height) {
 	double ret = 0;
 
 	// Compute sum of values which are "in range"
@@ -48,7 +48,7 @@ double sum_kernel(const conv *map, int x, int y, int width, int height) {
 	return ret;
 }
 
-double sum_kernel_normalized(const conv *map, int x, int y, int width, int height) {
+double sum_kernel_normalized(const conv *map, int x, int y, uint width, uint height) {
 	double ret = sum_kernel(map, x, y, width, height);
 	if (ret < 0) {
 		ret = 0;

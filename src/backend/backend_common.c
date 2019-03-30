@@ -38,10 +38,10 @@ xcb_render_picture_t solid_picture(xcb_connection_t *c, xcb_drawable_t d, bool a
 		return XCB_NONE;
 	}
 
-	col.alpha = a * 0xffff;
-	col.red = r * 0xffff;
-	col.green = g * 0xffff;
-	col.blue = b * 0xffff;
+	col.alpha = (uint16_t)(a * 0xffff);
+	col.red = (uint16_t)(r * 0xffff);
+	col.green = (uint16_t)(g * 0xffff);
+	col.blue = (uint16_t)(b * 0xffff);
 
 	rect.x = 0;
 	rect.y = 0;
@@ -54,8 +54,8 @@ xcb_render_picture_t solid_picture(xcb_connection_t *c, xcb_drawable_t d, bool a
 	return picture;
 }
 
-xcb_image_t *
-make_shadow(xcb_connection_t *c, const conv *kernel, double opacity, int width, int height) {
+xcb_image_t *make_shadow(xcb_connection_t *c, const conv *kernel, double opacity,
+                         uint16_t width, uint16_t height) {
 	/*
 	 * We classify shadows into 4 kinds of regions
 	 *    r = shadow radius
@@ -74,8 +74,9 @@ make_shadow(xcb_connection_t *c, const conv *kernel, double opacity, int width, 
 	assert(shadow_sum);
 	// We only support square kernels for shadow
 	assert(kernel->w == kernel->h);
-	int d = kernel->w, r = d / 2;
-	int swidth = width + r * 2, sheight = height + r * 2;
+	uint d = (uint)kernel->w;
+	uint16_t r = (uint16_t)d / 2;
+	uint16_t swidth = width + r * 2, sheight = height + r * 2;
 
 	assert(d % 2 == 1);
 	assert(d > 0);
@@ -92,11 +93,11 @@ make_shadow(xcb_connection_t *c, const conv *kernel, double opacity, int width, 
 
 	// If the window body is smaller than the kernel, we do convolution directly
 	if (width < r * 2 && height < r * 2) {
-		for (int y = 0; y < sheight; y++) {
-			for (int x = 0; x < swidth; x++) {
+		for (uint y = 0; y < sheight; y++) {
+			for (uint x = 0; x < swidth; x++) {
 				double sum = sum_kernel_normalized(
-				    kernel, d - x - 1, d - y - 1, width, height);
-				data[y * sstride + x] = sum * 255.0;
+				    kernel, (int)(d - x - 1), (int)(d - y - 1), width, height);
+				data[y * sstride + x] = (uint8_t)(sum * 255.0);
 			}
 		}
 		return ximage;
@@ -109,72 +110,75 @@ make_shadow(xcb_connection_t *c, const conv *kernel, double opacity, int width, 
 		// +------+-------------+------+
 		// |      |             |      |
 		// +------+-------------+------+
-		for (int y = 0; y < sheight; y++) {
-			for (int x = 0; x < r * 2; x++) {
-				double sum = sum_kernel_normalized(kernel, d - x - 1,
-				                                   d - y - 1, d, height) *
-				             255.0;
-				data[y * sstride + x] = sum;
-				data[y * sstride + swidth - x - 1] = sum;
+		for (uint y = 0; y < sheight; y++) {
+			for (uint x = 0; x < r * 2; x++) {
+				double sum =
+				    sum_kernel_normalized(kernel, (int)(d - x - 1),
+				                          (int)(d - y - 1), d, height) *
+				    255.0;
+				data[y * sstride + x] = (uint8_t)sum;
+				data[y * sstride + swidth - x - 1] = (uint8_t)sum;
 			}
 		}
-		for (int y = 0; y < sheight; y++) {
+		for (uint y = 0; y < sheight; y++) {
 			double sum =
-			    sum_kernel_normalized(kernel, 0, d - y - 1, d, height) * 255.0;
-			memset(&data[y * sstride + r * 2], sum, width - 2 * r);
+			    sum_kernel_normalized(kernel, 0, (int)(d - y - 1), d, height) * 255.0;
+			memset(&data[y * sstride + r * 2], (uint8_t)sum, width - 2 * r);
 		}
 		return ximage;
 	}
 	if (width < r * 2) {
 		// Similarly, for width smaller than kernel
-		for (int y = 0; y < r * 2; y++) {
-			for (int x = 0; x < swidth; x++) {
-				double sum = sum_kernel_normalized(kernel, d - x - 1,
-				                                   d - y - 1, width, d) *
-				             255.0;
-				data[y * sstride + x] = sum;
-				data[(sheight - y - 1) * sstride + x] = sum;
+		for (uint y = 0; y < r * 2; y++) {
+			for (uint x = 0; x < swidth; x++) {
+				double sum =
+				    sum_kernel_normalized(kernel, (int)(d - x - 1),
+				                          (int)(d - y - 1), width, d) *
+				    255.0;
+				data[y * sstride + x] = (uint8_t)sum;
+				data[(sheight - y - 1) * sstride + x] = (uint8_t)sum;
 			}
 		}
-		for (int x = 0; x < swidth; x++) {
+		for (uint x = 0; x < swidth; x++) {
 			double sum =
-			    sum_kernel_normalized(kernel, d - x - 1, 0, width, d) * 255.0;
-			for (int y = r * 2; y < height; y++) {
-				data[y * sstride + x] = sum;
+			    sum_kernel_normalized(kernel, (int)(d - x - 1), 0, width, d) * 255.0;
+			for (uint y = r * 2; y < height; y++) {
+				data[y * sstride + x] = (uint8_t)sum;
 			}
 		}
 		return ximage;
 	}
 
 	// Fill part 3
-	for (int y = r; y < height + r; y++) {
-		memset(data + sstride * y + r, 255 * opacity, width);
+	for (uint y = r; y < height + r; y++) {
+		memset(data + sstride * y + r, (uint8_t)(255 * opacity), width);
 	}
 
 	// Part 1
-	for (int y = 0; y < r * 2; y++) {
-		for (int x = 0; x < r * 2; x++) {
+	for (uint y = 0; y < r * 2; y++) {
+		for (uint x = 0; x < r * 2; x++) {
 			double tmpsum = shadow_sum[y * d + x] * opacity * 255.0;
-			data[y * sstride + x] = tmpsum;
-			data[(sheight - y - 1) * sstride + x] = tmpsum;
-			data[(sheight - y - 1) * sstride + (swidth - x - 1)] = tmpsum;
-			data[y * sstride + (swidth - x - 1)] = tmpsum;
+			data[y * sstride + x] = (uint8_t)tmpsum;
+			data[(sheight - y - 1) * sstride + x] = (uint8_t)tmpsum;
+			data[(sheight - y - 1) * sstride + (swidth - x - 1)] = (uint8_t)tmpsum;
+			data[y * sstride + (swidth - x - 1)] = (uint8_t)tmpsum;
 		}
 	}
 
 	// Part 2, top/bottom
-	for (int y = 0; y < r * 2; y++) {
+	for (uint y = 0; y < r * 2; y++) {
 		double tmpsum = shadow_sum[d * y + d - 1] * opacity * 255.0;
-		memset(&data[y * sstride + r * 2], tmpsum, width - r * 2);
-		memset(&data[(sheight - y - 1) * sstride + r * 2], tmpsum, width - r * 2);
+		memset(&data[y * sstride + r * 2], (uint8_t)tmpsum, width - r * 2);
+		memset(&data[(sheight - y - 1) * sstride + r * 2], (uint8_t)tmpsum,
+		       width - r * 2);
 	}
 
 	// Part 2, left/right
-	for (int x = 0; x < r * 2; x++) {
+	for (uint x = 0; x < r * 2; x++) {
 		double tmpsum = shadow_sum[d * (d - 1) + x] * opacity * 255.0;
-		for (int y = r * 2; y < height; y++) {
-			data[y * sstride + x] = tmpsum;
-			data[y * sstride + (swidth - x - 1)] = tmpsum;
+		for (uint y = r * 2; y < height; y++) {
+			data[y * sstride + x] = (uint8_t)tmpsum;
+			data[y * sstride + (swidth - x - 1)] = (uint8_t)tmpsum;
 		}
 	}
 
@@ -184,9 +188,10 @@ make_shadow(xcb_connection_t *c, const conv *kernel, double opacity, int width, 
 /**
  * Generate shadow <code>Picture</code> for a window.
  */
-bool build_shadow(xcb_connection_t *c, xcb_drawable_t d, double opacity, const int width,
-                  const int height, const conv *kernel, xcb_render_picture_t shadow_pixel,
-                  xcb_pixmap_t *pixmap, xcb_render_picture_t *pict) {
+bool build_shadow(xcb_connection_t *c, xcb_drawable_t d, double opacity,
+                  const uint16_t width, const uint16_t height, const conv *kernel,
+                  xcb_render_picture_t shadow_pixel, xcb_pixmap_t *pixmap,
+                  xcb_render_picture_t *pict) {
 	xcb_image_t *shadow_image = NULL;
 	xcb_pixmap_t shadow_pixmap = XCB_NONE, shadow_pixmap_argb = XCB_NONE;
 	xcb_render_picture_t shadow_picture = XCB_NONE, shadow_picture_argb = XCB_NONE;
@@ -256,15 +261,18 @@ shadow_picture_err:
 	return false;
 }
 
-void *default_backend_render_shadow(backend_t *backend_data, int width, int height,
-                                    const conv *kernel, double r, double g, double b, double a) {
+void *
+default_backend_render_shadow(backend_t *backend_data, uint width, uint height,
+                              const conv *kernel, double r, double g, double b, double a) {
 	xcb_pixmap_t shadow_pixel = solid_picture(backend_data->c, backend_data->root,
 	                                          true, 1, r, g, b),
 	             shadow = XCB_NONE;
 	xcb_render_picture_t pict = XCB_NONE;
 
-	build_shadow(backend_data->c, backend_data->root, a, width, height, kernel,
-	             shadow_pixel, &shadow, &pict);
+	assert(width < UINT16_MAX);
+	assert(height < UINT16_MAX);
+	build_shadow(backend_data->c, backend_data->root, a, (uint16_t)width,
+	             (uint16_t)height, kernel, shadow_pixel, &shadow, &pict);
 
 	auto visual = x_get_visual_for_standard(backend_data->c, XCB_PICT_STANDARD_ARGB_32);
 	void *ret = backend_data->ops->bind_pixmap(

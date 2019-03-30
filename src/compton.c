@@ -111,7 +111,7 @@ static inline void free_xinerama_info(session_t *ps) {
 static inline uint64_t get_time_ms(void) {
 	struct timespec tp;
 	clock_gettime(CLOCK_MONOTONIC, &tp);
-	return tp.tv_sec * ((uint64_t)1000ul) + tp.tv_nsec / 1000000;
+	return (uint64_t)tp.tv_sec * 1000 + (uint64_t)tp.tv_nsec / 1000000;
 }
 
 // XXX Move to x.c
@@ -202,9 +202,9 @@ static double fade_timeout(session_t *ps) {
 	if (ps->o.fade_delta + ps->fade_time < now)
 		return 0;
 
-	int diff = ps->o.fade_delta + ps->fade_time - now;
+	auto diff = ps->o.fade_delta + ps->fade_time - now;
 
-	diff = normalize_i_range(diff, 0, ps->o.fade_delta * 2);
+	diff = normalize_ul_range(diff, 0, ps->o.fade_delta * 2);
 
 	return diff / 1000.0;
 }
@@ -215,7 +215,7 @@ static double fade_timeout(session_t *ps) {
  * @param steps steps of fading
  * @return whether we are still in fading mode
  */
-static bool run_fade(session_t *ps, win **_w, unsigned steps) {
+static bool run_fade(session_t *ps, win **_w, ulong steps) {
 	win *w = *_w;
 	if (w->state == WSTATE_MAPPED || w->state == WSTATE_UNMAPPED) {
 		// We are not fading
@@ -277,8 +277,8 @@ static int should_ignore(session_t *ps, unsigned long sequence) {
 /**
  * Determine the event mask for a window.
  */
-long determine_evmask(session_t *ps, xcb_window_t wid, win_evmode_t mode) {
-	long evmask = 0;
+uint32_t determine_evmask(session_t *ps, xcb_window_t wid, win_evmode_t mode) {
+	uint32_t evmask = 0;
 	win *w = NULL;
 
 	// Check if it's a mapped frame window
@@ -292,7 +292,7 @@ long determine_evmask(session_t *ps, xcb_window_t wid, win_evmode_t mode) {
 	// Check if it's a mapped client window
 	if (WIN_EVMODE_CLIENT == mode ||
 	    ((w = find_toplevel(ps, wid)) && w->a.map_state == XCB_MAP_STATE_VIEWABLE)) {
-		if (ps->o.frame_opacity || ps->o.track_wdata || ps->track_atom_lst ||
+		if (ps->o.frame_opacity > 0 || ps->o.track_wdata || ps->track_atom_lst ||
 		    ps->o.detect_client_opacity)
 			evmask |= XCB_EVENT_MASK_PROPERTY_CHANGE;
 	}
@@ -412,7 +412,7 @@ static void handle_root_flags(session_t *ps) {
 				         "temporarily disabled");
 			}
 		}
-		ps->root_flags &= ~ROOT_FLAGS_SCREEN_CHANGE;
+		ps->root_flags &= ~(ulong)ROOT_FLAGS_SCREEN_CHANGE;
 	}
 }
 
@@ -423,7 +423,7 @@ static win *paint_preprocess(session_t *ps, bool *fade_running) {
 	*fade_running = false;
 
 	// Fading step calculation
-	unsigned long steps = 0L;
+	ulong steps = 0L;
 	auto now = get_time_ms();
 	if (ps->fade_time) {
 		assert(now >= ps->fade_time);
@@ -777,7 +777,7 @@ static bool initialize_backend(session_t *ps) {
 }
 
 /// Handle configure event of a root window
-void configure_root(session_t *ps, int width, int height) {
+void configure_root(session_t *ps, uint16_t width, uint16_t height) {
 	log_info("Root configuration changed, new geometry: %dx%d", width, height);
 	// On root window changes
 	bool has_root_change = false;
@@ -1070,11 +1070,14 @@ void update_ewmh_active_win(session_t *ps) {
 static bool register_cm(session_t *ps) {
 	assert(!ps->reg_win);
 
-	ps->reg_win =
-	    XCreateSimpleWindow(ps->dpy, ps->root, 0, 0, 1, 1, 0, XCB_NONE, XCB_NONE);
+	ps->reg_win = xcb_generate_id(ps->c);
+	auto e = xcb_request_check(
+	    ps->c, xcb_create_window_checked(ps->c, XCB_COPY_FROM_PARENT, ps->reg_win, ps->root,
+	                                     0, 0, 1, 1, 0, XCB_NONE, ps->vis, 0, NULL));
 
-	if (!ps->reg_win) {
+	if (e) {
 		log_fatal("Failed to create window.");
+		free(e);
 		return false;
 	}
 
@@ -1096,7 +1099,7 @@ static bool register_cm(session_t *ps) {
 
 	// Set _NET_WM_PID
 	{
-		uint32_t pid = getpid();
+		auto pid = getpid();
 		xcb_change_property(ps->c, XCB_PROP_MODE_REPLACE, ps->reg_win,
 		                    get_atom(ps, "_NET_WM_PID"), XCB_ATOM_CARDINAL, 32, 1,
 		                    &pid);
@@ -1112,7 +1115,7 @@ static bool register_cm(session_t *ps) {
 	if (!ps->o.no_x_selection) {
 		unsigned len = strlen(REGISTER_PROP) + 2;
 		int s = ps->scr;
-		Atom atom;
+		xcb_atom_t atom;
 
 		while (s >= 10) {
 			++len;
@@ -1772,10 +1775,13 @@ static session_t *session_init(int argc, char **argv, Display *dpy,
 	XSetErrorHandler(xerror);
 
 	ps->scr = DefaultScreen(ps->dpy);
-	ps->root = RootWindow(ps->dpy, ps->scr);
 
-	ps->vis = XVisualIDFromVisual(DefaultVisual(ps->dpy, ps->scr));
-	ps->depth = DefaultDepth(ps->dpy, ps->scr);
+	auto screen = x_screen_of_display(ps->c, ps->scr);
+	ps->vis = screen->root_visual;
+	ps->depth = screen->root_depth;
+	ps->root = screen->root;
+	ps->root_width = screen->width_in_pixels;
+	ps->root_height = screen->height_in_pixels;
 
 	// Start listening to events on root earlier to catch all possible
 	// root geometry changes
@@ -1789,9 +1795,6 @@ static session_t *session_init(int argc, char **argv, Display *dpy,
 		log_error("Failed to setup root window event mask");
 		free(e);
 	}
-
-	ps->root_width = DisplayWidth(ps->dpy, ps->scr);
-	ps->root_height = DisplayHeight(ps->dpy, ps->scr);
 
 	xcb_prefetch_extension_data(ps->c, &xcb_render_id);
 	xcb_prefetch_extension_data(ps->c, &xcb_composite_id);

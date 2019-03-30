@@ -38,7 +38,7 @@ enum root_flags {
 
 void add_damage(session_t *ps, const region_t *damage);
 
-long determine_evmask(session_t *ps, xcb_window_t wid, win_evmode_t mode);
+uint32_t determine_evmask(session_t *ps, xcb_window_t wid, win_evmode_t mode);
 
 xcb_window_t find_client_win(session_t *ps, xcb_window_t w);
 
@@ -47,7 +47,7 @@ win *find_toplevel2(session_t *ps, xcb_window_t wid);
 win *recheck_focus(session_t *ps);
 
 /// Handle configure event of a root window
-void configure_root(session_t *ps, int width, int height);
+void configure_root(session_t *ps, uint16_t width, uint16_t height);
 
 /// Handle configure event of a regular window
 void configure_win(session_t *ps, xcb_configure_notify_event_t *ce);
